@@ -1,0 +1,733 @@
+themes:
+  jewel:
+    vars:
+      bg: "#161b22"
+      fg: "#ffffff"
+
+      btn_bg: "#423c57"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#2f343f"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#6c757d"
+      groupbox_border: "#301b38"
+
+      combo_bg: "#423c57"
+      combo_fg: "#ffffff"
+      combo_border: "#39424e"
+      combo_popup_bg: "#39424e"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#39424e"
+      combo_item_hover_bg: "#39424e"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#161b22"
+      line_fg: "#ffffff"
+      line_placeholder: "#a27aa2"
+
+      textedit_ro_bg: "#301b38"
+      textedit_rw_bg: "#534153"
+      textedit_fg: "#ffffff"
+      textedit_border: "#534153"
+      selection_bg: "#775a7a"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#605b6e"
+      tab_selected_bg: "#39424e"
+      tab_hover_bg: "#807a8c"
+      accent: "#6c757d"
+
+      splitter_handle_bg: "#1e1e1e"
+
+      abstract_bg: "#161b22"
+      abstract_fg: "#ffffff"
+      abstract_border: "#534153"
+      abstract_item_hover_bg: "#39424e"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#272a2e"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#39424e"
+
+      msg_bg: "#1e1e1e"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#6c757d"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2f343f"
+
+      inputdlg_bg: "#161b22"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#6c757d"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2f343f"
+
+      dialog_bg: "#161b22"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#161b22"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#6c757d"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2f343f"
+  bluish:
+    vars:
+      bg: "#161b22"
+      fg: "#ffffff"
+
+      btn_bg: "#2d3c47"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#2f343f"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#6c757d"
+      groupbox_border: "#1b2230"
+
+      combo_bg: "#2d3c47"
+      combo_fg: "#ffffff"
+      combo_border: "#39424e"
+      combo_popup_bg: "#39424e"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#39424e"
+      combo_item_hover_bg: "#39424e"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#161b22"
+      line_fg: "#ffffff"
+      line_placeholder: "#89a2a2"
+
+      textedit_ro_bg: "#1b2230"
+      textedit_rw_bg: "#3d434c"
+      textedit_fg: "#ffffff"
+      textedit_border: "#3d434c"
+      selection_bg: "#4f5a77"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#4b5664"
+      tab_selected_bg: "#39424e"
+      tab_hover_bg: "#60687f"
+      accent: "#6c757d"
+
+      splitter_handle_bg: "#1e1e1e"
+
+      abstract_bg: "#161b22"
+      abstract_fg: "#ffffff"
+      abstract_border: "#3d434c"
+      abstract_item_hover_bg: "#39424e"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#272a2e"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#39424e"
+
+      msg_bg: "#1e1e1e"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#6c757d"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2f343f"
+
+      inputdlg_bg: "#161b22"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#6c757d"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2f343f"
+
+      dialog_bg: "#161b22"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#161b22"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#6c757d"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2f343f"
+  green_grey:
+    vars:
+      bg: "#1b2224"
+      fg: "#ffffff"
+
+      btn_bg: "#424244"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#2f343f"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#6c757d"
+      groupbox_border: "#09272b"
+
+      combo_bg: "#424244"
+      combo_fg: "#ffffff"
+      combo_border: "#39424e"
+      combo_popup_bg: "#39424e"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#39424e"
+      combo_item_hover_bg: "#39424e"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#1b2224"
+      line_fg: "#ffffff"
+      line_placeholder: "#96989a"
+
+      textedit_ro_bg: "#09272b"
+      textedit_rw_bg: "#333b3e"
+      textedit_fg: "#ffffff"
+      textedit_border: "#333b3e"
+      selection_bg: "#555559"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#4b4b4d"
+      tab_selected_bg: "#39424e"
+      tab_hover_bg: "#666669"
+      accent: "#6c757d"
+
+      splitter_handle_bg: "#1e1e21"
+
+      abstract_bg: "#1b2224"
+      abstract_fg: "#ffffff"
+      abstract_border: "#333b3e"
+      abstract_item_hover_bg: "#39424e"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#272a2e"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#39424e"
+
+      msg_bg: "#1e1e1e"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#6c757d"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2f343f"
+
+      inputdlg_bg: "#1b2224"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#6c757d"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2f343f"
+
+      dialog_bg: "#1b2224"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#1b2224"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#6c757d"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2f343f"
+  dark_grey:
+    vars:
+      bg: "#1a1d21"
+      fg: "#ffffff"
+
+      btn_bg: "#2a2e32"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#3a3e42"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#4a4e52"
+      groupbox_border: "#2a2e32"
+
+      combo_bg: "#2a2e32"
+      combo_fg: "#ffffff"
+      combo_border: "#2a2e32"
+      combo_popup_bg: "#2a2e32"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#2a2e32"
+      combo_item_hover_bg: "#3a3e42"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#1a1d21"
+      line_fg: "#ffffff"
+      line_placeholder: "#8a8e92"
+
+      textedit_ro_bg: "#2a2e32"
+      textedit_rw_bg: "#3a3e42"
+      textedit_fg: "#ffffff"
+      textedit_border: "#3a3e42"
+      selection_bg: "#4a4e52"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#2a2e32"
+      tab_selected_bg: "#3498db"
+      tab_hover_bg: "#3a3e42"
+      accent: "#4a4e52"
+
+      splitter_handle_bg: "#2a2e32"
+
+      abstract_bg: "#1a1d21"
+      abstract_fg: "#ffffff"
+      abstract_border: "#3a3e42"
+      abstract_item_hover_bg: "#3a3e42"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#2a2e32"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#3a3e42"
+
+      msg_bg: "#1a1d21"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#3498db"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2980b9"
+
+      inputdlg_bg: "#1a1d21"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#3498db"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2980b9"
+
+      dialog_bg: "#1a1d21"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#1a1d21"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#3498db"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2980b9"
+  auburn:
+    vars:
+      bg: "#161b22"
+      fg: "#ffffff"
+
+      btn_bg: "#5a423c"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#4a3c2b"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#6c757d"
+      groupbox_border: "#3b301b"
+
+      combo_bg: "#5a423c"
+      combo_fg: "#ffffff"
+      combo_border: "#39424e"
+      combo_popup_bg: "#39424e"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#39424e"
+      combo_item_hover_bg: "#39424e"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#161b22"
+      line_fg: "#ffffff"
+      line_placeholder: "#b28a70"
+
+      textedit_ro_bg: "#3b301b"
+      textedit_rw_bg: "#6b5343"
+      textedit_fg: "#ffffff"
+      textedit_border: "#6b5343"
+      selection_bg: "#8c6a5a"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#7a645b"
+      tab_selected_bg: "#39424e"
+      tab_hover_bg: "#9a8072"
+      accent: "#6c757d"
+
+      splitter_handle_bg: "#1e1e1e"
+
+      abstract_bg: "#161b22"
+      abstract_fg: "#ffffff"
+      abstract_border: "#6b5343"
+      abstract_item_hover_bg: "#39424e"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#272a2e"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#39424e"
+
+      msg_bg: "#1e1e1e"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#6c757d"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2f343f"
+
+      inputdlg_bg: "#161b22"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#6c757d"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2f343f"
+
+      dialog_bg: "#161b22"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#161b22"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#6c757d"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2f343f"
+  reddish:
+    vars:
+      bg: "#161b22"
+      fg: "#ffffff"
+
+      btn_bg: "#472d3c"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#2f343f"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#6c757d"
+      groupbox_border: "#30161b"
+
+      combo_bg: "#472d3c"
+      combo_fg: "#ffffff"
+      combo_border: "#39424e"
+      combo_popup_bg: "#39424e"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#39424e"
+      combo_item_hover_bg: "#39424e"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#161b22"
+      line_fg: "#ffffff"
+      line_placeholder: "#a28089"
+
+      textedit_ro_bg: "#30161b"
+      textedit_rw_bg: "#543d41"
+      textedit_fg: "#ffffff"
+      textedit_border: "#543d41"
+      selection_bg: "#774f5a"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#604b4f"
+      tab_selected_bg: "#39424e"
+      tab_hover_bg: "#806060"
+      accent: "#6c757d"
+
+      splitter_handle_bg: "#1e1e1e"
+
+      abstract_bg: "#161b22"
+      abstract_fg: "#ffffff"
+      abstract_border: "#543d41"
+      abstract_item_hover_bg: "#39424e"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#272a2e"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#39424e"
+
+      msg_bg: "#1e1e1e"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#6c757d"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2f343f"
+
+      inputdlg_bg: "#161b22"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#6c757d"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2f343f"
+
+      dialog_bg: "#161b22"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#161b22"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#472d3c"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2f343f"
+  steel_ocean:
+    vars:
+      bg: "#1e2126"
+      fg: "#ffffff"
+
+      btn_bg: "#39424e"
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#2f343f"
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#6c757d"
+      groupbox_border: "#1b3a47"
+
+      combo_bg: "#39424e"
+      combo_fg: "#ffffff"
+      combo_border: "#39424e"
+      combo_popup_bg: "#39424e"
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#39424e"
+      combo_item_hover_bg: "#39424e"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#1e2126"
+      line_fg: "#ffffff"
+      line_placeholder: "#a2a2a3"
+
+      textedit_ro_bg: "#1b3a47"
+      textedit_rw_bg: "#3d444c"
+      textedit_fg: "#ffffff"
+      textedit_border: "#3d444c"
+      selection_bg: "#6c757d"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#565e66"
+      tab_selected_bg: "#39424e"
+      tab_hover_bg: "#737c85"
+      accent: "#6c757d"
+
+      splitter_handle_bg: "#202428"
+
+      abstract_bg: "#1e2126"
+      abstract_fg: "#ffffff"
+      abstract_border: "#3d444c"
+      abstract_item_hover_bg: "#39424e"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#272a2e"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#39424e"
+
+      msg_bg: "#1e1e1e"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#6c757d"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#2f343f"
+
+      inputdlg_bg: "#1e2126"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#6c757d"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#2f343f"
+
+      dialog_bg: "#1e2126"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#1e2126"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#39424e"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#2f343f"
+  bluey:
+    vars:
+      bg: "#1E2A3A"
+      fg: "#ECF0F1"
+
+      btn_bg: "#34495E"
+      btn_fg: "#ECF0F1"
+      btn_bg_hover: "#2C3E50"
+      btn_hover_fg: "#ECF0F1"
+
+      border_hover: "#7F8C8D"
+      groupbox_border: "#34495E"
+
+      combo_bg: "#34495E"
+      combo_fg: "#ECF0F1"
+      combo_border: "#2C3E50"
+      combo_popup_bg: "#2C3E50"
+      combo_popup_fg: "#ECF0F1"
+      combo_popup_border: "#2C3E50"
+      combo_item_hover_bg: "#34495E"
+      combo_item_hover_fg: "#ECF0F1"
+      combo_hover_fg: "#ECF0F1"
+
+      line_bg: "#1E2A3A"
+      line_fg: "#ECF0F1"
+      line_placeholder: "#95A5A6"
+
+      textedit_ro_bg: "#2C3E50"
+      textedit_rw_bg: "#34495E"
+      textedit_fg: "#ECF0F1"
+      textedit_border: "#34495E"
+      selection_bg: "#4A6377"
+      selection_fg: "#ECF0F1"
+
+      tab_bg: "#34495E"
+      tab_selected_bg: "#2C3E50"
+      tab_hover_bg: "#4A6377"
+      accent: "#7F8C8D"
+
+      splitter_handle_bg: "#2C3E50"
+
+      abstract_bg: "#1E2A3A"
+      abstract_fg: "#ECF0F1"
+      abstract_border: "#34495E"
+      abstract_item_hover_bg: "#2C3E50"
+      abstract_item_hover_fg: "#ECF0F1"
+
+      header_bg: "#34495E"
+      header_fg: "#ECF0F1"
+
+      menubar_fg: "#ECF0F1"
+      menu_item_selected_bg: "#2C3E50"
+
+      msg_bg: "#1E2A3A"
+      msg_fg: "#ECF0F1"
+      msg_btn_bg: "#34495E"
+      msg_btn_fg: "#ECF0F1"
+      msg_btn_hover_bg: "#2C3E50"
+
+      inputdlg_bg: "#1E2A3A"
+      inputdlg_fg: "#ECF0F1"
+      inputdlg_btn_bg: "#34495E"
+      inputdlg_btn_fg: "#ECF0F1"
+      inputdlg_btn_hover_bg: "#2C3E50"
+
+      dialog_bg: "#1E2A3A"
+      dialog_fg: "#ECF0F1"
+      dialog_line_bg: "#1E2A3A"
+      dialog_line_fg: "#ECF0F1"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#34495E"
+      dialog_btn_fg: "#ECF0F1"
+      dialog_btn_hover_bg: "#2C3E50"
+  hastings_shadmehry:
+    vars:
+      # Subdued, professional take on your 12-color palette
+      bg: "#161b22"                 # (muted #010047/#04004D)
+      fg: "#ffffff"
+
+      btn_bg: "#0F2F3A"             # (muted #00394B)
+      btn_fg: "#ffffff"
+      btn_bg_hover: "#123547"       # (muted #0C415D)
+      btn_hover_fg: "#ffffff"
+
+      border_hover: "#0E2732"       # (muted #161b22)
+      groupbox_border: "#0E2732"
+
+      combo_bg: "#0F2F3A"
+      combo_fg: "#ffffff"
+      combo_border: "#0F2F3A"
+      combo_popup_bg: "#0A1326"     # (muted #011240)
+      combo_popup_fg: "#ffffff"
+      combo_popup_border: "#0E2732"
+      combo_item_hover_bg: "#123547"
+      combo_item_hover_fg: "#ffffff"
+      combo_hover_fg: "#ffffff"
+
+      line_bg: "#161b22"
+      line_fg: "#ffffff"
+      line_placeholder: "#0E2732"
+
+      textedit_ro_bg: "#0B0B2A"     # (muted #08053D)
+      textedit_rw_bg: "#0B0B2A"
+      textedit_fg: "#ffffff"
+      textedit_border: "#0E2732"
+      selection_bg: "#123547"
+      selection_fg: "#ffffff"
+
+      tab_bg: "#0A1326"             # (muted #011240)
+      tab_selected_bg: "#1F1530"    # (muted #28003B)
+      tab_hover_bg: "#23183C"       # (muted #2E0052)
+      accent: "#4C2A57"             # (muted #661270) — used sparingly
+
+      splitter_handle_bg: "#0E2732"
+
+      abstract_bg: "#0B0B2A"
+      abstract_fg: "#ffffff"
+      abstract_border: "#0E2732"
+      abstract_item_hover_bg: "#123547"
+      abstract_item_hover_fg: "#ffffff"
+
+      header_bg: "#0A1326"
+      header_fg: "#ffffff"
+
+      menubar_fg: "#ffffff"
+      menu_item_selected_bg: "#2A1731"  # (muted #490050)
+
+      msg_bg: "#161b22"
+      msg_fg: "#ffffff"
+      msg_btn_bg: "#0F2F3A"
+      msg_btn_fg: "#ffffff"
+      msg_btn_hover_bg: "#123547"
+
+      inputdlg_bg: "#161b22"
+      inputdlg_fg: "#ffffff"
+      inputdlg_btn_bg: "#0F2F3A"
+      inputdlg_btn_fg: "#ffffff"
+      inputdlg_btn_hover_bg: "#123547"
+
+      dialog_bg: "#161b22"
+      dialog_fg: "#ffffff"
+      dialog_line_bg: "#161b22"
+      dialog_line_fg: "#ffffff"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#0F2F3A"
+      dialog_btn_fg: "#ffffff"
+      dialog_btn_hover_bg: "#123547"
+  dark_theme:
+    vars:
+      bg: "#121212"
+      fg: "#E6E6E6"
+
+      btn_bg: "#1A1F24"
+      btn_fg: "#E6E6E6"
+      btn_bg_hover: "#242B31"
+      btn_hover_fg: "#E6E6E6"
+
+      border_hover: "#3A4048"
+      groupbox_border: "#242B31"
+
+      combo_bg: "#1A1F24"
+      combo_fg: "#E6E6E6"
+      combo_border: "#242B31"
+      combo_popup_bg: "#161A1E"
+      combo_popup_fg: "#E6E6E6"
+      combo_popup_border: "#242B31"
+      combo_item_hover_bg: "#242B31"
+      combo_item_hover_fg: "#E6E6E6"
+      combo_hover_fg: "#E6E6E6"
+
+      line_bg: "#121212"
+      line_fg: "#D9DEE3"
+      line_placeholder: "#7F8A99"
+
+      textedit_ro_bg: "#14171B"
+      textedit_rw_bg: "#161A1E"
+      textedit_fg: "#E6E6E6"
+      textedit_border: "#232830"
+      selection_bg: "#8FB7E7"   # primary accent
+      selection_fg: "#0B0E12"
+
+      tab_bg: "#161A1E"
+      tab_selected_bg: "#2A3442"  # tinted toward primary accent
+      tab_hover_bg: "#202733"
+      accent: "#8FB7E7"           # primary accent (links, focus/selected cues)
+      secondary_accent: "#64B5B0" # muted teal for small highlights
+
+      splitter_handle_bg: "#2A4D4D"   # uses secondary accent subtly
+
+      abstract_bg: "#13161A"
+      abstract_fg: "#E6E6E6"
+      abstract_border: "#232830"
+      abstract_item_hover_bg: "#202733"
+      abstract_item_hover_fg: "#E6E6E6"
+
+      header_bg: "#16191C"
+      header_fg: "#E6E6E6"
+
+      menubar_fg: "#E6E6E6"
+      menu_item_selected_bg: "#2A4D4D"  # secondary accent for tiny highlight
+
+      msg_bg: "#121212"
+      msg_fg: "#E6E6E6"
+      msg_btn_bg: "#1A1F24"
+      msg_btn_fg: "#E6E6E6"
+      msg_btn_hover_bg: "#242B31"
+
+      inputdlg_bg: "#121212"
+      inputdlg_fg: "#E6E6E6"
+      inputdlg_btn_bg: "#1A1F24"
+      inputdlg_btn_fg: "#E6E6E6"
+      inputdlg_btn_hover_bg: "#242B31"
+
+      dialog_bg: "#121212"
+      dialog_fg: "#E6E6E6"
+      dialog_line_bg: "#121212"
+      dialog_line_fg: "#D9DEE3"
+      dialog_line_border: "transparent"
+      dialog_btn_bg: "#1A1F24"
+      dialog_btn_fg: "#E6E6E6"
+      dialog_btn_hover_bg: "#242B31"
