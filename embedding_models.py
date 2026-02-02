@@ -1,9 +1,11 @@
 import logging
 import os
+import gc
 import unicodedata
 from pathlib import Path
 import torch
 from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
 
 from config import get_config
 from utilities_core import (
@@ -14,32 +16,33 @@ from utilities_core import (
 
 logger = logging.getLogger(__name__)
 
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 
 def _get_model_family(model_path: str) -> str:
     model_path_lower = model_path.lower()
     if "qwen" in model_path_lower or "qwen3-embedding" in model_path_lower:
         return "qwen"
-    elif "bge" in model_path_lower:
+    if "bge" in model_path_lower:
         return "bge"
-    else:
-        return "generic"
+    return "generic"
 
 
 def _get_prompt_for_family(family: str, is_query: bool = False) -> str:
     if family == "qwen" and is_query:
         return "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:"
-    elif family == "bge":
+    if family == "bge":
         return "Represent this sentence for searching relevant passages: "
-    else:
-        return ""
+    return ""
 
 
 def _normalize_text(text: str) -> str:
-    text = unicodedata.normalize('NFKC', text)
+    text = unicodedata.normalize("NFKC", text)
+
     cleaned = []
     for char in text:
-        if char in '\n\t\r':
-            cleaned.append(' ')
+        if char in "\n\t\r":
+            cleaned.append(" ")
         elif ord(char) < 32:
             continue
         elif ord(char) == 127:
@@ -48,9 +51,34 @@ def _normalize_text(text: str) -> str:
             continue
         else:
             cleaned.append(char)
-    result = ''.join(cleaned)
-    result = ' '.join(result.split())
+
+    result = "".join(cleaned)
+    result = " ".join(result.split())
+
     return result.strip() or " "
+
+
+def _validate_and_clean_texts(texts: list) -> list[str]:
+    cleaned = []
+
+    for text in texts:
+        if text is None:
+            cleaned.append(" ")
+            continue
+
+        if isinstance(text, (list, tuple)):
+            parts = []
+            for item in text:
+                if item is not None:
+                    parts.append(str(item))
+            text = " ".join(parts) if parts else " "
+
+        if not isinstance(text, str):
+            text = str(text)
+
+        cleaned.append(_normalize_text(text))
+
+    return cleaned
 
 
 class DirectEmbeddingModel:
@@ -71,26 +99,37 @@ class DirectEmbeddingModel:
         self.prompt = prompt
         self.model = None
         self.tokenizer = None
+
+        logger.info(f"Initializing DirectEmbeddingModel: {os.path.basename(model_path)}")
         self._initialize_model()
 
     def _initialize_model(self):
         family = _get_model_family(self.model_path)
+
         model_kwargs = {
-            'torch_dtype': self.dtype if self.dtype else torch.float32,
+            "torch_dtype": self.dtype if self.dtype else torch.float32,
         }
+
         is_cuda = self.device.lower().startswith("cuda")
         if family == "qwen":
             if is_cuda and supports_flash_attention():
-                model_kwargs['attn_implementation'] = 'flash_attention_2'
+                model_kwargs["attn_implementation"] = "flash_attention_2"
+                logger.debug("Using flash_attention_2 for Qwen model")
             else:
-                model_kwargs['attn_implementation'] = 'sdpa'
+                model_kwargs["attn_implementation"] = "sdpa"
+                logger.debug("Using sdpa for Qwen model")
         else:
-            model_kwargs['attn_implementation'] = 'sdpa'
+            model_kwargs["attn_implementation"] = "sdpa"
+
         tokenizer_kwargs = {
-            'model_max_length': self.max_seq_length,
+            "model_max_length": self.max_seq_length,
+            "use_fast": False,
         }
+
         if family == "qwen":
-            tokenizer_kwargs['padding_side'] = 'left'
+            tokenizer_kwargs["padding_side"] = "left"
+
+        logger.info("Loading SentenceTransformer model...")
         self.model = SentenceTransformer(
             model_name_or_path=self.model_path,
             device=self.device,
@@ -98,69 +137,144 @@ class DirectEmbeddingModel:
             model_kwargs=model_kwargs,
             tokenizer_kwargs=tokenizer_kwargs,
         )
+
         self.model.max_seq_length = self.max_seq_length
-        if hasattr(self.model, 'tokenizer') and self.model.tokenizer is not None:
+
+        if hasattr(self.model, "tokenizer") and self.model.tokenizer is not None:
             self.tokenizer = self.model.tokenizer
+
             if self.tokenizer.pad_token is None:
                 if self.tokenizer.eos_token is not None:
                     self.tokenizer.pad_token = self.tokenizer.eos_token
                     self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
                 else:
-                    self.tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+                    self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+
+            logger.info(f"Tokenizer pad_token: {self.tokenizer.pad_token}")
+
         self.model.to(self.device)
 
-    def _safe_encode(self, texts: list[str], batch_size: int = None) -> list[list[float]]:
-        bs = batch_size if batch_size is not None else self.batch_size
+        logger.info(f"Model loaded successfully on {self.device}")
+        logger.info(f"  - Dtype: {self.dtype}")
+        logger.info(f"  - Batch size: {self.batch_size}")
+        logger.info(f"  - Max sequence length: {self.max_seq_length}")
+
+    def _safe_encode(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        texts = _validate_and_clean_texts(texts)
         embeddings = self.model.encode(
             texts,
-            batch_size=bs,
+            batch_size=len(texts),
             convert_to_tensor=True,
             normalize_embeddings=True,
-            show_progress_bar=True,
+            show_progress_bar=False,
         )
         return embeddings.float().cpu().numpy().tolist()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        try:
-            embeddings = self._safe_encode(texts, batch_size=self.batch_size)
-            return embeddings
-        except Exception:
-            pass
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        logger.info(f"Embedding {len(texts)} documents...")
+
         all_embeddings = []
+        failed_batches = []
         total = len(texts)
-        batch_size = self.batch_size
-        while batch_size >= 1:
+
+        for batch_start in tqdm(range(0, total, self.batch_size), desc="Batches", unit="batch"):
+            batch_end = min(batch_start + self.batch_size, total)
+            batch_texts = texts[batch_start:batch_end]
+
             try:
-                for start in range(0, total, batch_size):
-                    end = min(start + batch_size, total)
-                    batch_texts = texts[start:end]
+                batch_embeddings = self._safe_encode(batch_texts)
+                all_embeddings.extend(batch_embeddings)
+
+            except Exception as e:
+                logger.error(f"Batch {batch_start}-{batch_end} failed: {e}")
+
+                token_info = []
+                for text in _validate_and_clean_texts(batch_texts):
                     try:
-                        batch_embeddings = self._safe_encode(batch_texts, batch_size=batch_size)
-                        all_embeddings.extend(batch_embeddings)
-                    except Exception:
-                        for text in batch_texts:
-                            try:
-                                single_embedding = self._safe_encode([text], batch_size=1)
-                                all_embeddings.extend(single_embedding)
-                            except Exception:
-                                fallback_text = ''.join(c for c in text if c.isascii() and c.isprintable()).strip() or "empty"
-                                single_embedding = self._safe_encode([fallback_text], batch_size=1)
-                                all_embeddings.extend(single_embedding)
-                return all_embeddings
-            except Exception:
-                batch_size = batch_size // 2
+                        individual_tokens = self.tokenizer(
+                            text,
+                            padding=False,
+                            truncation=True,
+                            max_length=self.max_seq_length,
+                            return_tensors=None,
+                        )
+                        token_info.append({
+                            "token_count": len(individual_tokens["input_ids"]),
+                            "first_10_tokens": individual_tokens["input_ids"][:10],
+                            "last_10_tokens": individual_tokens["input_ids"][-10:],
+                            "has_special_tokens": self.tokenizer.cls_token_id in individual_tokens["input_ids"],
+                        })
+                    except Exception as tok_err:
+                        token_info.append({
+                            "token_count": -1,
+                            "tokenization_error": str(tok_err),
+                        })
+
+                token_counts = [t["token_count"] for t in token_info if t["token_count"] > 0]
+
+                failed_batches.append({
+                    "batch_start": batch_start,
+                    "batch_end": batch_end,
+                    "text_lengths": [len(t) for t in batch_texts if isinstance(t, str)],
+                    "token_counts": token_counts,
+                    "token_count_min": min(token_counts) if token_counts else None,
+                    "token_count_max": max(token_counts) if token_counts else None,
+                    "token_count_variance": (max(token_counts) - min(token_counts)) if token_counts else None,
+                    "token_details": token_info,
+                    "error": str(e),
+                })
+
+                for idx, text in enumerate(batch_texts):
+                    global_idx = batch_start + idx
+                    try:
+                        single_embedding = self._safe_encode([text])
+                        all_embeddings.extend(single_embedding)
+                    except Exception as e_single:
+                        logger.error(f"Single encode failed at {global_idx}: {e_single}")
+                        fallback_text = "".join(c for c in str(text) if c.isascii() and c.isprintable()).strip() or "empty"
+                        try:
+                            single_embedding = self._safe_encode([fallback_text])
+                            all_embeddings.extend(single_embedding)
+                        except Exception:
+                            placeholder = self._safe_encode(["placeholder"])
+                            all_embeddings.extend(placeholder)
+                            logger.error(f"Using placeholder for index {global_idx}")
+
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+
+        if failed_batches:
+            import json
+            failed_batches_path = Path(__file__).parent / "failed_batches.json"
+            with open(failed_batches_path, "w", encoding="utf-8") as f:
+                json.dump(failed_batches, f, indent=2, ensure_ascii=False)
+            logger.info(f"Saved {len(failed_batches)} failed batches to {failed_batches_path}")
+
+        logger.info(f"Embedding complete. Generated {len(all_embeddings)} embeddings.")
+
         return all_embeddings
 
     def embed_query(self, text: str) -> list[float]:
         if self.prompt:
             text = self.prompt + text
+
         if not isinstance(text, str):
             text = str(text)
+
         text = _normalize_text(text)
-        embeddings = self._safe_encode([text], batch_size=1)
-        return embeddings[0]
+
+        embeddings = self._safe_encode([text])
+        return embeddings[0] if embeddings else []
 
     def __del__(self):
         if self.model is not None:
@@ -180,23 +294,38 @@ def create_embedding_model(
 ) -> DirectEmbeddingModel:
     config = get_config()
     model_name = os.path.basename(model_path)
+
     family = _get_model_family(model_path)
     model_native_precision = get_model_native_precision(model_name)
+
     use_half = config.database.half
     _dtype, _batch_size = get_embedding_dtype_and_batch(
         compute_device=compute_device,
         use_half=use_half,
         model_native_precision=model_native_precision,
         model_name=model_name,
-        is_query=is_query
+        is_query=is_query,
     )
+
     final_dtype = dtype if dtype is not None else _dtype
     final_batch_size = batch_size if batch_size is not None else _batch_size
+
     if family == "qwen":
         max_seq_length = 8192
     else:
         max_seq_length = 512
+
     prompt = _get_prompt_for_family(family, is_query)
+
+    logger.info(f"Creating embedding model: {model_name}")
+    logger.info(f"  - Family: {family}")
+    logger.info(f"  - Device: {compute_device}")
+    logger.info(f"  - Dtype: {final_dtype}")
+    logger.info(f"  - Batch size: {final_batch_size}")
+    logger.info(f"  - Max sequence: {max_seq_length}")
+    if prompt:
+        logger.info(f"  - Using prompt: {prompt[:50]}...")
+
     return DirectEmbeddingModel(
         model_path=model_path,
         device=compute_device,
@@ -216,6 +345,7 @@ def load_embedding_model(
 ) -> DirectEmbeddingModel:
     model_name = os.path.basename(model_path)
     model_native_precision = get_model_native_precision(model_name)
+
     dtype, batch_size = get_embedding_dtype_and_batch(
         compute_device=compute_device,
         use_half=use_half,
@@ -223,6 +353,7 @@ def load_embedding_model(
         model_name=model_name,
         is_query=is_query,
     )
+
     model = create_embedding_model(
         model_path=model_path,
         compute_device=compute_device,
@@ -230,4 +361,10 @@ def load_embedding_model(
         batch_size=batch_size,
         is_query=is_query,
     )
+
+    if verbose:
+        from utilities_core import my_cprint
+        precision = "float32" if dtype is None else str(dtype).split(".")[-1]
+        my_cprint(f"{model_name} ({precision}) loaded using a batch size of {batch_size}.", "green")
+
     return model
