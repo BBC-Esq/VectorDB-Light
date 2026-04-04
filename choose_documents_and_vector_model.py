@@ -52,7 +52,7 @@ class SymlinkWorker(QThread):
                     files = [
                         str(dir_path / filename)
                         for filename in filenames
-                        if (dir_path / filename).is_file() 
+                        if (dir_path / filename).is_file()
                         and (dir_path / filename).suffix.lower() in ALLOWED_EXTENSIONS
                     ]
                 except OSError:
@@ -95,11 +95,19 @@ class SymlinkWorker(QThread):
             self._should_stop = True
 
 
+def _get_main_window():
+    for widget in QApplication.topLevelWidgets():
+        if hasattr(widget, "databases_tab"):
+            return widget
+    return None
+
+
 def choose_documents_directory():
     current_dir = Path(__file__).parent.resolve()
     config = get_config()
     target_dir = config.docs_dir
     target_dir.mkdir(parents=True, exist_ok=True)
+    main_window = _get_main_window()
 
     msg_box = QMessageBox()
     msg_box.setWindowTitle("Selection Type")
@@ -115,11 +123,7 @@ def choose_documents_directory():
     if clicked_button == cancel_button:
         return
 
-    file_dialog = QFileDialog()
-
     def start_worker(source):
-        main_window = _get_main_window()
-
         progress = QProgressDialog("Creating symlinks...", "Cancel", 0, 0, parent=main_window)
         progress.setWindowModality(Qt.WindowModal)
         progress.setMinimumDuration(0)
@@ -189,6 +193,8 @@ def choose_documents_directory():
         worker.finished.connect(_done)
         worker.start()
 
+    file_dialog = QFileDialog()
+
     if clicked_button == dir_button:
         file_dialog.setFileMode(QFileDialog.Directory)
         file_dialog.setOption(QFileDialog.ShowDirsOnly, True)
@@ -220,6 +226,7 @@ def choose_documents_directory():
 
 
 def show_incompatible_files_dialog(incompatible_files):
+    main_window = _get_main_window()
     dialog_text = (
         "The following files are not supported by the database builder and will be skipped:\n\n"
         + "\n".join(incompatible_files)
@@ -227,7 +234,7 @@ def show_incompatible_files_dialog(incompatible_files):
         "\n\nClick 'OK' to proceed with the supported documents only, or 'Cancel' to go back."
     )
 
-    incompatible_dialog = QDialog()
+    incompatible_dialog = QDialog(main_window)
     incompatible_dialog.resize(800, 600)
     incompatible_dialog.setWindowTitle("Unsupported Files Detected")
 
@@ -256,17 +263,12 @@ def load_config():
     return get_config()
 
 def select_embedding_model_directory():
+    main_window = _get_main_window()
     initial_dir = Path("Models") if Path("Models").exists() else Path.home()
     chosen_directory = QFileDialog.getExistingDirectory(
-        None, "Select Embedding Model Directory", str(initial_dir)
+        main_window, "Select Embedding Model Directory", str(initial_dir)
     )
     if chosen_directory:
         config = get_config()
         config.EMBEDDING_MODEL_NAME = chosen_directory
         config.save()
-
-def _get_main_window():
-    for widget in QApplication.topLevelWidgets():
-        if hasattr(widget, "databases_tab"):
-            return widget
-    return None

@@ -55,24 +55,10 @@ VECTOR_MODELS = {
     ],
 }
 
-DOCUMENT_LOADERS = {
-    # ".pdf": "PyMuPDFLoader",
-    ".pdf": "CustomPyMuPDFLoader",
-    ".docx": "Docx2txtLoader",
-    ".txt": "TextLoader",
-    ".enex": "EverNoteLoader",
-    ".epub": "UnstructuredEPubLoader",
-    ".eml": "UnstructuredEmailLoader",
-    ".msg": "UnstructuredEmailLoader",
-    ".csv": "CSVLoader",
-    ".xls": "UnstructuredExcelLoader",
-    ".xlsx": "UnstructuredExcelLoader",
-    ".xlsm": "UnstructuredExcelLoader",
-    ".rtf": "UnstructuredRTFLoader",
-    ".odt": "UnstructuredODTLoader",
-    ".md": "UnstructuredMarkdownLoader",
-    ".html": "BSHTMLLoader",
-}
+SUPPORTED_EXTENSIONS = (
+    ".pdf", ".docx", ".txt", ".eml", ".msg", ".csv",
+    ".xls", ".xlsx", ".xlsm", ".rtf", ".md", ".html",
+)
 
 TOOLTIPS = {
     "CHOOSE_FILES": "Select documents to add to the database. Remember to transcribe audio files in the Tools tab first.",

@@ -6,6 +6,8 @@ faulthandler.enable(all_threads=True)
 import os
 import sys
 
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
 from pathlib import Path
 
 from utilities import set_cuda_paths, configure_logging

@@ -9,9 +9,14 @@ from collections import defaultdict
 import random
 import shutil
 import traceback
+import numpy as np
 import torch
 import tiledb
-import numpy as np
+
+_vs_lib = os.path.join(os.path.dirname(tiledb.__file__), "vector_search")
+if os.path.isdir(_vs_lib):
+    os.add_dll_directory(_vs_lib)
+
 import tiledb.vector_search as vs
 from tiledb.vector_search import _tiledbvspy as vspy
 
@@ -108,43 +113,6 @@ class CreateVectorDB:
 
             logger.info(f"Total chunks to embed: {len(all_texts)}")
 
-            logger.info("Cleaning text before embedding...")
-            cleaned_texts = []
-            cleaned_metadatas = []
-            cleaned_ids = []
-            cleaned_hash_mappings = []
-
-            for i, text in enumerate(all_texts):
-                if text is None:
-                    logger.warning(f"Skipping None text at index {i}")
-                    continue
-                if isinstance(text, (list, tuple)):
-                    text = " ".join(str(item) for item in text if item)
-                    logger.warning(f"Flattened list/tuple to string at index {i}")
-                if not isinstance(text, str):
-                    text = str(text)
-
-                cleaned = "".join(
-                    char for char in text
-                    if char == "\n" or char == "\t" or (ord(char) >= 32 and ord(char) != 127)
-                ).strip()
-
-                if not cleaned:
-                    logger.warning(f"Skipping empty text after cleaning at index {i}")
-                    continue
-
-                cleaned_texts.append(cleaned)
-                cleaned_metadatas.append(all_metadatas[i])
-                cleaned_ids.append(all_ids[i])
-                cleaned_hash_mappings.append(hash_id_mappings[i])
-
-            all_texts = cleaned_texts
-            all_metadatas = cleaned_metadatas
-            all_ids = cleaned_ids
-            hash_id_mappings = cleaned_hash_mappings
-
-            logger.info(f"Text cleaning completed. {len(all_texts)} chunks remaining.")
-
             embedding_start_time = time.time()
 
             with cuda_mgr.cuda_operation():
@@ -154,8 +122,10 @@ class CreateVectorDB:
             embedding_elapsed = embedding_end_time - embedding_start_time
             my_cprint(f"Embedding computation completed in {embedding_elapsed:.2f} seconds.", "cyan")
 
+            vectors_array = np.ascontiguousarray(vectors, dtype=np.float32)
+
             logger.info("Creating TileDB vector database...")
-            self._create_tiledb_array(all_texts, vectors, all_metadatas, all_ids)
+            self._create_tiledb_array(all_texts, vectors_array, all_metadatas, all_ids)
 
             my_cprint("Processed all chunks", "yellow")
 

@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import unicodedata
 from pathlib import Path
 
 from termcolor import cprint
@@ -171,6 +172,75 @@ def get_appropriate_dtype(compute_device: str, use_half: bool, model_native_prec
 
     logger.debug(f"Unrecognized precision '{model_native_precision}', returning float32")
     return torch.float32
+
+
+def normalize_text(text, preserve_whitespace=False):
+    if text is None:
+        return None
+
+    if isinstance(text, (list, tuple)):
+        text = " ".join(str(item) for item in text if item is not None)
+
+    if not isinstance(text, str):
+        text = str(text)
+
+    text = unicodedata.normalize("NFKC", text)
+
+    INVISIBLE_CHARS = {
+        '\u00ad',   # soft hyphen
+        '\u200b',   # zero-width space
+        '\u200c',   # zero-width non-joiner
+        '\u200d',   # zero-width joiner
+        '\u200e',   # left-to-right mark
+        '\u200f',   # right-to-left mark
+        '\u2060',   # word joiner
+        '\u2061',   # function application
+        '\u2062',   # invisible times
+        '\u2063',   # invisible separator
+        '\u2064',   # invisible plus
+        '\ufeff',   # byte order mark
+    }
+
+    cleaned = []
+    for char in text:
+        code = ord(char)
+
+        if char == '\n' or char == '\t':
+            if preserve_whitespace:
+                cleaned.append(char)
+            else:
+                cleaned.append(' ')
+        elif char == '\r':
+            cleaned.append(' ')
+        elif code < 32:
+            continue
+        elif code == 127:
+            continue
+        elif code > 65535:
+            continue
+        elif char in INVISIBLE_CHARS:
+            continue
+        elif 128 <= code <= 159:
+            continue
+        elif code == 65533:
+            continue
+        elif 57344 <= code <= 63743:
+            continue
+        else:
+            cleaned.append(char)
+
+    result = "".join(cleaned)
+
+    if preserve_whitespace:
+        import re
+        result = re.sub(r'[^\S\n\t]+', ' ', result)
+        result = re.sub(r' *\n *', '\n', result)
+        result = re.sub(r'\n{3,}', '\n\n', result)
+    else:
+        result = " ".join(result.split())
+
+    result = result.strip()
+    return result if result else None
 
 
 def get_embedding_batch_size(model_name: str, compute_device: str) -> int:

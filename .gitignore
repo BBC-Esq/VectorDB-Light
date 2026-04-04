@@ -1,0 +1,66 @@
+# === Virtual environment ===
+Lib/
+Include/
+Scripts/
+share/
+pyvenv.cfg
+.lock
+
+# === Python artifacts ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# === Local models and data ===
+Models/
+Qwen3-Embedding-0.6B/
+Vector_DB/
+Vector_DB_Backup/
+Docs_for_DB/
+Assets/
+CSS/
+
+# === Test/development scripts ===
+test_tokenization.py
+test_tokenization2.py
+test_tokenization3.py
+test_tokenization4.py
+test_tokenization5.py
+test_tokenization6.py
+test_tokenization7.py
+test_tokenization8.py
+test_tokenization9.py
+benchmark_forward.py
+encode_benchmark.py
+document_processor_single.py
+
+# === Stage scripts (pipeline dev/test) ===
+stage_extract.py
+stage_split.py
+stage_tokenize.py
+
+# === Benchmark results and diagnostics ===
+Benchmark Results/
+diagnostic_progress.txt
+split_progress.txt
+error01.txt
+error02.txt
+error03.txt
+error04.txt
+error05.txt
+contexts.txt
+
+# === Backups and test data ===
+PROGRAM_BACKUP/
+TEST - FILES/
+
+# === Troubleshooting log ===
+troubleshooting_log.md
+
+# === Runtime config (user-specific) ===
+config.yaml
+settings.yaml
+
+# === Other local-only files ===
+download_snapshot.py
