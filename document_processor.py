@@ -16,15 +16,22 @@ import fitz
 from bs4 import BeautifulSoup
 
 from utilities_core import normalize_text
-from constants import SUPPORTED_EXTENSIONS
+from constants import SUPPORTED_EXTENSIONS, PIPELINE_PRESETS
 from config import get_config
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-INGEST_THREADS = min(16, max(2, (os.cpu_count() or 4) - 2))
-INGEST_PROCESSES = max(1, (os.cpu_count() or 4) - 2)
 THREADS_PER_PROCESS = 4
+
+
+def _get_ingest_params():
+    try:
+        preset_name = get_config().database.pipeline_preset
+    except Exception:
+        preset_name = "normal"
+    preset = PIPELINE_PRESETS.get(preset_name, PIPELINE_PRESETS["normal"])
+    return preset["ingest_threads"], preset["ingest_processes"]
 
 logger = logging.getLogger(__name__)
 
@@ -311,8 +318,10 @@ def load_documents(source_dir: Path) -> list:
     if not doc_paths:
         return docs
 
-    if len(doc_paths) <= INGEST_PROCESSES:
-        n_workers = min(INGEST_THREADS, max(len(doc_paths), 1))
+    ingest_threads, ingest_processes = _get_ingest_params()
+
+    if len(doc_paths) <= ingest_processes:
+        n_workers = min(ingest_threads, max(len(doc_paths), 1))
 
         executor = None
         try:
@@ -332,7 +341,7 @@ def load_documents(source_dir: Path) -> list:
             if executor:
                 executor.shutdown(wait=True, cancel_futures=True)
     else:
-        n_procs = min(INGEST_PROCESSES, len(doc_paths))
+        n_procs = min(ingest_processes, len(doc_paths))
         logger.info(f"Loading {len(doc_paths)} documents with {n_procs} processes \u00b7 {THREADS_PER_PROCESS} threads each")
 
         chunks = [[] for _ in range(n_procs)]

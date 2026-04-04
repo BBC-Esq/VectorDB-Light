@@ -30,12 +30,21 @@ class DatabaseConfig(BaseModel):
     half: bool = False
     document_types: str = ""
     search_term: str = ""
+    pipeline_preset: str = "normal"
 
     @field_validator('chunk_overlap')
     @classmethod
     def validate_overlap(cls, v: int, info) -> int:
         if 'chunk_size' in info.data and v >= info.data['chunk_size']:
             raise ValueError("chunk_overlap must be less than chunk_size")
+        return v
+
+    @field_validator('pipeline_preset')
+    @classmethod
+    def validate_pipeline_preset(cls, v: str) -> str:
+        valid = {"minimal", "low", "normal", "high", "maximum"}
+        if v not in valid:
+            raise ValueError(f"pipeline_preset must be one of {valid}")
         return v
 
 

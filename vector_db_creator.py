@@ -40,17 +40,21 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 STAGE_EXTRACT_PATH = PROJECT_ROOT / "stage_extract.py"
 STAGE_SPLIT_PATH = PROJECT_ROOT / "stage_split.py"
 
-# --- Extract stage ---
+from constants import PIPELINE_PRESETS
+
 EXTRACT_MAX_RETRIES = 3
-
-# --- Split stage ---
-SPLIT_WORKER_BATCH_SIZE = 2000
 SPLIT_MAX_WORKER_RETRIES = 3
-SPLIT_MAX_PARALLEL_WORKERS = 0
 SPLIT_MAX_RETRIES = 5
-
-# --- TileDB write ---
 TILEDB_WRITE_BATCH_SIZE = 100000
+
+
+def _get_split_params():
+    try:
+        preset_name = get_config().database.pipeline_preset
+    except Exception:
+        preset_name = "normal"
+    preset = PIPELINE_PRESETS.get(preset_name, PIPELINE_PRESETS["normal"])
+    return preset["split_max_parallel_workers"], preset["split_worker_batch_size"]
 
 
 def _run_subprocess_stage(name, cmd, timeout=3600):
@@ -106,6 +110,7 @@ def _run_extract_with_retry(source_dir, output_pkl):
 
 def _run_split_with_retry(extracted_pkl, chunks_pkl, chunk_size, chunk_overlap, checkpoint_dir):
     python = sys.executable
+    split_parallel, split_batch = _get_split_params()
 
     for attempt in range(1, SPLIT_MAX_RETRIES + 1):
         logger.info(f"Split attempt {attempt}/{SPLIT_MAX_RETRIES}")
@@ -116,9 +121,9 @@ def _run_split_with_retry(extracted_pkl, chunks_pkl, chunk_size, chunk_overlap, 
             str(chunks_pkl),
             str(chunk_size),
             str(chunk_overlap),
-            "--worker-batch-size", str(SPLIT_WORKER_BATCH_SIZE),
+            "--worker-batch-size", str(split_batch),
             "--max-worker-retries", str(SPLIT_MAX_WORKER_RETRIES),
-            "--max-parallel-workers", str(SPLIT_MAX_PARALLEL_WORKERS),
+            "--max-parallel-workers", str(split_parallel),
             "--checkpoint-dir", str(checkpoint_dir),
             "--checkpoint-interval", "5",
         ]

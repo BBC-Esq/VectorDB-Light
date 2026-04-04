@@ -28,12 +28,22 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 PROJECT_ROOT = Path(__file__).resolve().parent
 STAGE_TOKENIZE_PATH = PROJECT_ROOT / "stage_tokenize.py"
 
+from constants import PIPELINE_PRESETS
+
 TOKENIZE_BATCH_SIZE = 100
 WORKER_BATCH_SIZE = 60000
 MAX_WORKER_RETRIES = 3
-MAX_PARALLEL_WORKERS = 0
 TOKENIZE_MAX_RETRIES = 5
 TOKENIZE_CHECKPOINT_INTERVAL = 5
+
+
+def _get_tokenize_parallel_workers():
+    try:
+        preset_name = get_config().database.pipeline_preset
+    except Exception:
+        preset_name = "normal"
+    preset = PIPELINE_PRESETS.get(preset_name, PIPELINE_PRESETS["normal"])
+    return preset["tokenize_max_parallel_workers"]
 
 
 def _get_model_family(model_path: str) -> str:
@@ -75,21 +85,36 @@ def _normalize_text(text: str) -> str:
     return result.strip() or " "
 
 
-def _get_encode_batch_size(device: str) -> int:
+ENCODE_BATCH_SIZE_BY_MODEL = {
+    "bge-small-en-v1.5": 10,
+    "bge-base-en-v1.5": 10,
+    "bge-large-en-v1.5": 8,
+    "Qwen3-Embedding-0.6B": 10,
+    "Qwen3-Embedding-4B": 5,
+}
+
+
+def _get_encode_batch_size(device: str, model_path: str = "") -> int:
+    model_name = os.path.basename(model_path).lower() if model_path else ""
+    for key, batch_size in ENCODE_BATCH_SIZE_BY_MODEL.items():
+        if key.lower() in model_name:
+            logger.info(f"  ENCODE_BATCH_SIZE: {batch_size} (model-aware default for {key})")
+            return batch_size
+
     if device.startswith("cuda"):
         try:
             gpu_props = torch.cuda.get_device_properties(0)
             vram_gb = gpu_props.total_memory / (1024 ** 3)
-            batch_size = max(64, min(1024, int(vram_gb * 32)))
-            logger.info(f"  Auto ENCODE_BATCH_SIZE: {batch_size} "
-                        f"(GPU: {gpu_props.name}, VRAM: {vram_gb:.1f} GB)")
+            batch_size = max(10, min(256, int(vram_gb * 4)))
+            logger.info(f"  ENCODE_BATCH_SIZE: {batch_size} (VRAM fallback, "
+                        f"GPU: {gpu_props.name}, {vram_gb:.1f} GB)")
             return batch_size
         except Exception as e:
-            logger.warning(f"  Could not query GPU properties: {e}, defaulting to 256")
-            return 256
+            logger.warning(f"  Could not query GPU: {e}, defaulting to 10")
+            return 10
     else:
-        logger.info(f"  CPU mode: ENCODE_BATCH_SIZE = 64")
-        return 64
+        logger.info(f"  ENCODE_BATCH_SIZE: 10 (CPU mode)")
+        return 10
 
 
 def _run_subprocess_stage(name, cmd, cwd, timeout=3600):
@@ -154,7 +179,7 @@ def _run_tokenize_with_retry(
             "--start-text-index", str(current_start_index),
             "--worker-batch-size", str(WORKER_BATCH_SIZE),
             "--max-worker-retries", str(MAX_WORKER_RETRIES),
-            "--max-parallel-workers", str(MAX_PARALLEL_WORKERS),
+            "--max-parallel-workers", str(_get_tokenize_parallel_workers()),
             "--encode-batch-size", str(encode_batch_size),
         ]
         if use_fast:
@@ -353,7 +378,7 @@ class DirectEmbeddingModel:
         total = len(texts)
         logger.info(f"Embedding {total} texts via subprocess tokenization pipeline")
 
-        encode_batch_size = _get_encode_batch_size(self.device)
+        encode_batch_size = _get_encode_batch_size(self.device, self.model_path)
 
         tmp_dir = tempfile.mkdtemp(prefix="vectordb_embed_")
         tmp_path = Path(tmp_dir)
