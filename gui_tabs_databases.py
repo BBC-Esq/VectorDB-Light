@@ -26,12 +26,40 @@ class VectorDBWorker(QThread):
 
     def run(self):
         try:
-            from vector_db_creator import CreateVectorDB
+            import subprocess
+            import sys
 
             self.progress.emit("Initializing database creation...")
 
-            create_vector_db = CreateVectorDB(database_name=self.database_name)
-            create_vector_db.run()
+            cmd = [
+                sys.executable, "-c",
+                "from vector_db_creator import create_vector_db_in_process; "
+                f"create_vector_db_in_process({self.database_name!r})"
+            ]
+
+            project_root = str(Path(__file__).resolve().parent)
+
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                cwd=project_root,
+                env={**__import__('os').environ, "PYTHONUNBUFFERED": "1"},
+            )
+
+            for line in process.stdout:
+                line = line.rstrip("\n")
+                if line.strip():
+                    print(f"  [DB Creation] {line}")
+
+            process.wait()
+
+            if process.returncode != 0:
+                raise RuntimeError(
+                    f"Database creation process exited with code {process.returncode}"
+                )
 
             if not self._is_cancelled:
                 self.finished.emit(True, "Database created successfully!")
@@ -43,13 +71,6 @@ class VectorDBWorker(QThread):
             traceback.print_exc()
             self.finished.emit(False, f"Database creation failed: {str(e)}")
         finally:
-            try:
-                import torch
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                    torch.cuda.synchronize()
-            except Exception:
-                pass
             gc.collect()
 
     def cancel(self):

@@ -1,11 +1,18 @@
+import gc
 import logging
 import os
+import pickle
+import subprocess
+import sys
+import tempfile
+import time
 import unicodedata
 from pathlib import Path
 
 import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
+from sentence_transformers.util import batch_to_device
 
 from config import get_config
 from utilities_core import (
@@ -15,6 +22,18 @@ from utilities_core import (
 )
 
 logger = logging.getLogger(__name__)
+
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+STAGE_TOKENIZE_PATH = PROJECT_ROOT / "dev" / "stage_tokenize.py"
+
+TOKENIZE_BATCH_SIZE = 100
+WORKER_BATCH_SIZE = 60000
+MAX_WORKER_RETRIES = 3
+MAX_PARALLEL_WORKERS = 0
+TOKENIZE_MAX_RETRIES = 5
+TOKENIZE_CHECKPOINT_INTERVAL = 5
 
 
 def _get_model_family(model_path: str) -> str:
@@ -54,6 +73,197 @@ def _normalize_text(text: str) -> str:
     result = " ".join(result.split())
 
     return result.strip() or " "
+
+
+def _get_encode_batch_size(device: str) -> int:
+    if device.startswith("cuda"):
+        try:
+            gpu_props = torch.cuda.get_device_properties(0)
+            vram_gb = gpu_props.total_memory / (1024 ** 3)
+            batch_size = max(64, min(1024, int(vram_gb * 32)))
+            logger.info(f"  Auto ENCODE_BATCH_SIZE: {batch_size} "
+                        f"(GPU: {gpu_props.name}, VRAM: {vram_gb:.1f} GB)")
+            return batch_size
+        except Exception as e:
+            logger.warning(f"  Could not query GPU properties: {e}, defaulting to 256")
+            return 256
+    else:
+        logger.info(f"  CPU mode: ENCODE_BATCH_SIZE = 64")
+        return 64
+
+
+def _run_subprocess_stage(name, cmd, cwd, timeout=3600):
+    logger.info(f"Starting subprocess stage: {name}")
+
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        cwd=str(cwd),
+        env={**os.environ, "PYTHONUNBUFFERED": "1"},
+    )
+
+    output_lines = []
+    for line in process.stdout:
+        line = line.rstrip("\n")
+        if line.strip():
+            logger.info(f"  [{name}] {line}")
+            output_lines.append(line)
+
+    process.wait(timeout=timeout)
+
+    if process.returncode != 0:
+        for line in output_lines[-10:]:
+            logger.error(f"  {line}")
+
+    return process.returncode, output_lines
+
+
+def _run_tokenize_with_retry(
+    python_exe, model_path, texts_pkl, tokenized_pkl,
+    checkpoint_dir, max_seq_length, encode_batch_size,
+    use_fast=True, length_sort=True,
+):
+    all_batches = []
+    all_errors = []
+    total_real_tokens = 0
+    total_pad_tokens = 0
+    current_start_index = 0
+    total_texts = None
+    attempt = 0
+
+    while attempt < TOKENIZE_MAX_RETRIES:
+        attempt += 1
+
+        attempt_output = checkpoint_dir / f"tokenized_attempt_{attempt}.pkl"
+
+        logger.info(f"Tokenize attempt {attempt}/{TOKENIZE_MAX_RETRIES} "
+                    f"(starting from text index {current_start_index})")
+
+        tokenize_cmd = [
+            python_exe, str(STAGE_TOKENIZE_PATH),
+            str(texts_pkl),
+            str(attempt_output),
+            model_path,
+            str(TOKENIZE_BATCH_SIZE),
+            str(max_seq_length),
+            "--checkpoint-dir", str(checkpoint_dir),
+            "--checkpoint-interval", str(TOKENIZE_CHECKPOINT_INTERVAL),
+            "--start-text-index", str(current_start_index),
+            "--worker-batch-size", str(WORKER_BATCH_SIZE),
+            "--max-worker-retries", str(MAX_WORKER_RETRIES),
+            "--max-parallel-workers", str(MAX_PARALLEL_WORKERS),
+            "--encode-batch-size", str(encode_batch_size),
+        ]
+        if use_fast:
+            tokenize_cmd.append("--use-fast")
+        else:
+            tokenize_cmd.append("--no-use-fast")
+        if length_sort:
+            tokenize_cmd.append("--length-sort")
+        else:
+            tokenize_cmd.append("--no-length-sort")
+
+        exit_code, _ = _run_subprocess_stage(
+            f"Tokenize (attempt {attempt})", tokenize_cmd, cwd=PROJECT_ROOT)
+
+        attempt_data = None
+        checkpoint_path = checkpoint_dir / "tokenize_checkpoint.pkl"
+
+        if exit_code == 0 and attempt_output.exists():
+            logger.info(f"Attempt {attempt} completed successfully")
+            with open(attempt_output, "rb") as f:
+                attempt_data = pickle.load(f)
+            try:
+                attempt_output.unlink()
+            except Exception:
+                pass
+
+        elif checkpoint_path.exists():
+            logger.warning(f"Attempt {attempt} crashed (exit code {exit_code}), "
+                           f"loading checkpoint...")
+            try:
+                with open(checkpoint_path, "rb") as f:
+                    attempt_data = pickle.load(f)
+                logger.info(f"Checkpoint has {len(attempt_data.get('batches', []))} batches, "
+                            f"{len(attempt_data.get('errors', []))} errors")
+                try:
+                    checkpoint_path.unlink()
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.error(f"Failed to read checkpoint: {e}")
+
+            if attempt_output.exists():
+                try:
+                    attempt_output.unlink()
+                except Exception:
+                    pass
+
+        else:
+            logger.error(f"Attempt {attempt} crashed with no recoverable data")
+
+        if attempt_data is not None:
+            if total_texts is None:
+                total_texts = attempt_data.get("total_texts", 0)
+
+            new_batches = attempt_data.get("batches", [])
+            new_errors = attempt_data.get("errors", [])
+            texts_processed = attempt_data.get("texts_processed", 0)
+
+            all_batches.extend(new_batches)
+            all_errors.extend(new_errors)
+
+            ps = attempt_data.get("padding_stats", {})
+            total_real_tokens += ps.get("total_real_tokens", 0)
+            total_pad_tokens += ps.get("total_pad_tokens", 0)
+
+            if "next_text_index" in attempt_data:
+                next_index = attempt_data["next_text_index"]
+            else:
+                next_index = attempt_data.get("start_text_index", current_start_index) + texts_processed
+
+            logger.info(f"Attempt {attempt} processed texts {current_start_index} to "
+                        f"{next_index - 1} ({len(new_batches)} batches, {len(new_errors)} errors)")
+
+            current_start_index = next_index
+
+            if total_texts is not None and current_start_index >= total_texts:
+                logger.info(f"All {total_texts} texts have been tokenized!")
+                break
+
+            if exit_code == 0:
+                break
+        else:
+            logger.warning(f"No data recovered from attempt {attempt}, "
+                           f"retrying from text index {current_start_index}")
+
+        if attempt >= TOKENIZE_MAX_RETRIES:
+            logger.error(f"Exhausted all {TOKENIZE_MAX_RETRIES} retries!")
+            break
+
+        logger.info("Waiting 3 seconds before retry...")
+        time.sleep(3)
+        gc.collect()
+
+    total_tokens = total_real_tokens + total_pad_tokens
+    efficiency_pct = (total_real_tokens / total_tokens * 100) if total_tokens > 0 else 100.0
+
+    logger.info(f"Tokenization complete: {len(all_batches)} batches, "
+                f"{len(all_errors)} errors, {efficiency_pct:.1f}% padding efficiency")
+
+    return {
+        "total_texts": total_texts or 0,
+        "batches": all_batches,
+        "errors": all_errors,
+        "padding_stats": {
+            "total_real_tokens": total_real_tokens,
+            "total_pad_tokens": total_pad_tokens,
+            "efficiency_pct": efficiency_pct,
+        },
+    }
 
 
 class DirectEmbeddingModel:
@@ -123,8 +333,7 @@ class DirectEmbeddingModel:
         self.model.to(self.device)
 
     def _safe_encode(self, texts: list[str]) -> np.ndarray:
-        batch_size = self.batch_size
-        bs = batch_size if batch_size else len(texts)
+        bs = self.batch_size if self.batch_size else len(texts)
         embeddings = self.model.encode(
             texts,
             batch_size=bs,
@@ -136,35 +345,96 @@ class DirectEmbeddingModel:
             return embeddings.float().cpu().numpy()
         return np.asarray(embeddings, dtype=np.float32)
 
+    @torch.inference_mode()
     def embed_documents(self, texts: list[str]) -> np.ndarray:
         if not texts:
             return np.array([], dtype=np.float32)
 
-        all_embeddings = []
         total = len(texts)
-        batch_size = self.batch_size
+        logger.info(f"Embedding {total} texts via subprocess tokenization pipeline")
 
-        for start in range(0, total, batch_size):
-            end = min(start + batch_size, total)
-            batch_texts = texts[start:end]
+        encode_batch_size = _get_encode_batch_size(self.device)
 
+        tmp_dir = tempfile.mkdtemp(prefix="vectordb_embed_")
+        tmp_path = Path(tmp_dir)
+        texts_pkl = tmp_path / "texts.pkl"
+        tokenized_pkl = tmp_path / "tokenized.pkl"
+        checkpoint_dir = tmp_path / "checkpoints"
+        checkpoint_dir.mkdir(exist_ok=True)
+
+        try:
+            logger.info(f"Writing {total} texts to temp pickle...")
+            with open(texts_pkl, "wb") as f:
+                pickle.dump(texts, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+            tokenized_data = _run_tokenize_with_retry(
+                python_exe=sys.executable,
+                model_path=self.model_path,
+                texts_pkl=texts_pkl,
+                tokenized_pkl=tokenized_pkl,
+                checkpoint_dir=checkpoint_dir,
+                max_seq_length=self.max_seq_length,
+                encode_batch_size=encode_batch_size,
+                use_fast=True,
+                length_sort=True,
+            )
+
+            batches = tokenized_data["batches"]
+            errors = tokenized_data["errors"]
+
+            if errors:
+                logger.warning(f"{len(errors)} tokenization errors occurred")
+
+            logger.info(f"Running forward pass on {len(batches)} pre-padded batches...")
+
+            self.model.eval()
+            all_embeddings = []
+            batch_count = 0
+
+            for batch_info in batches:
+                batch_count += 1
+                features_raw = batch_info["features"]
+
+                features = {}
+                for key, padded in features_raw.items():
+                    if isinstance(padded, np.ndarray):
+                        features[key] = torch.from_numpy(padded).long()
+                    else:
+                        features[key] = torch.tensor(padded, dtype=torch.long)
+
+                features = batch_to_device(features, self.model.device)
+
+                with torch.no_grad():
+                    out_features = self.model.forward(features)
+                    embeddings = out_features["sentence_embedding"].detach()
+                    embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+                    embeddings = embeddings.float().cpu().numpy()
+                    all_embeddings.append(embeddings)
+                    del out_features
+
+                del features
+
+                if batch_count % 50 == 0:
+                    gc.collect()
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+
+                if batch_count % 500 == 0:
+                    logger.info(f"  Forward pass: {batch_count}/{len(batches)} batches")
+
+            logger.info(f"Forward pass complete: {batch_count} batches processed")
+
+            if not all_embeddings:
+                return np.array([], dtype=np.float32)
+
+            return np.concatenate(all_embeddings, axis=0)
+
+        finally:
+            import shutil
             try:
-                batch_embeddings = self._safe_encode(batch_texts)
-                all_embeddings.append(batch_embeddings)
+                shutil.rmtree(tmp_dir, ignore_errors=True)
             except Exception:
-                for text in batch_texts:
-                    try:
-                        single_embedding = self._safe_encode([text])
-                        all_embeddings.append(single_embedding)
-                    except Exception:
-                        fallback_text = "".join(c for c in str(text) if c.isascii() and c.isprintable()).strip() or "empty"
-                        try:
-                            single_embedding = self._safe_encode([fallback_text])
-                            all_embeddings.append(single_embedding)
-                        except Exception:
-                            pass
-
-        return np.concatenate(all_embeddings, axis=0)
+                pass
 
     def embed_query(self, text: str) -> list[float]:
         if self.prompt:
