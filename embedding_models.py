@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-STAGE_TOKENIZE_PATH = PROJECT_ROOT / "dev" / "stage_tokenize.py"
+STAGE_TOKENIZE_PATH = PROJECT_ROOT / "stage_tokenize.py"
 
 TOKENIZE_BATCH_SIZE = 100
 WORKER_BATCH_SIZE = 60000

@@ -37,8 +37,8 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 os.environ.setdefault("RUST_BACKTRACE", "1")
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-STAGE_EXTRACT_PATH = PROJECT_ROOT / "dev" / "stage_extract.py"
-STAGE_SPLIT_PATH = PROJECT_ROOT / "dev" / "stage_split.py"
+STAGE_EXTRACT_PATH = PROJECT_ROOT / "stage_extract.py"
+STAGE_SPLIT_PATH = PROJECT_ROOT / "stage_split.py"
 
 # --- Extract stage ---
 EXTRACT_MAX_RETRIES = 3
