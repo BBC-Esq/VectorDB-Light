@@ -212,6 +212,15 @@ class CreateVectorDB:
             all_ids = []
             chunk_counters = defaultdict(int)
 
+            logger.info(f"Metadata mapping: {len(chunk_texts)} chunk_texts, "
+                        f"{len(doc_data)} chunks_with_meta")
+
+            if doc_data:
+                sample_text, sample_meta = doc_data[0]
+                logger.info(f"Sample metadata keys: {list(sample_meta.keys())}")
+            else:
+                logger.warning("chunks_with_meta is EMPTY — metadata will be missing!")
+
             for idx, text in enumerate(chunk_texts):
                 tiledb_id = str(random.randint(0, MAX_UINT64 - 1))
 
