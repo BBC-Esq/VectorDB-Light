@@ -48,7 +48,7 @@ def _get_model_family(model_path: str) -> str:
 def _get_prompt_for_family(family: str, is_query: bool = False) -> str:
     if family == "qwen" and is_query:
         return "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:"
-    if family == "bge":
+    if family == "bge" and is_query:
         return "Represent this sentence for searching relevant passages: "
     return ""
 
