@@ -401,7 +401,7 @@ class DirectEmbeddingModel:
                 max_seq_length=self.max_seq_length,
                 encode_batch_size=encode_batch_size,
                 use_fast=True,
-                length_sort=True,
+                length_sort=False,
             )
 
             batches = tokenized_data["batches"]
