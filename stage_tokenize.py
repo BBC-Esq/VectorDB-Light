@@ -136,9 +136,12 @@ def main():
 
             result[key] = padded
 
+        seq_indices = np.array([s["seq_index"] for s in batch_seqs], dtype=np.int64)
+
         batches_result.append({
             "batch_id": batch_id,
             "start_index": start_index,
+            "seq_indices": seq_indices,
             "features": result,
         })
 

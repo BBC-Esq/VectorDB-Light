@@ -86,9 +86,9 @@ def _normalize_text(text: str) -> str:
 
 
 ENCODE_BATCH_SIZE_BY_MODEL = {
-    "bge-small-en-v1.5": 10,
-    "bge-base-en-v1.5": 10,
-    "bge-large-en-v1.5": 8,
+    "bge-small-en-v1.5": 100,
+    "bge-base-en-v1.5": 80,
+    "bge-large-en-v1.5": 50,
     "Qwen3-Embedding-0.6B": 10,
     "Qwen3-Embedding-4B": 5,
 }
@@ -401,7 +401,7 @@ class DirectEmbeddingModel:
                 max_seq_length=self.max_seq_length,
                 encode_batch_size=encode_batch_size,
                 use_fast=True,
-                length_sort=False,
+                length_sort=True,
             )
 
             batches = tokenized_data["batches"]
@@ -414,11 +414,13 @@ class DirectEmbeddingModel:
 
             self.model.eval()
             all_embeddings = []
+            all_seq_indices = []
             batch_count = 0
 
             for batch_info in batches:
                 batch_count += 1
                 features_raw = batch_info["features"]
+                seq_indices = batch_info.get("seq_indices")
 
                 features = {}
                 for key, padded in features_raw.items():
@@ -435,6 +437,8 @@ class DirectEmbeddingModel:
                     embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
                     embeddings = embeddings.float().cpu().numpy()
                     all_embeddings.append(embeddings)
+                    if seq_indices is not None:
+                        all_seq_indices.append(seq_indices)
                     del out_features
 
                 del features
@@ -452,7 +456,16 @@ class DirectEmbeddingModel:
             if not all_embeddings:
                 return np.array([], dtype=np.float32)
 
-            return np.concatenate(all_embeddings, axis=0)
+            sorted_embeddings = np.concatenate(all_embeddings, axis=0)
+
+            if all_seq_indices:
+                indices = np.concatenate(all_seq_indices, axis=0)
+                result = np.empty_like(sorted_embeddings)
+                result[indices] = sorted_embeddings
+                logger.info(f"Unsorting embeddings: restored original order via seq_indices")
+                return result
+
+            return sorted_embeddings
 
         finally:
             import shutil

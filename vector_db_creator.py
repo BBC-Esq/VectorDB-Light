@@ -227,7 +227,7 @@ class CreateVectorDB:
             verbose=True,
         )
 
-    def _create_tiledb_array(self, texts, vectors_array, metadatas, ids):
+    def _create_tiledb_array(self, texts, vectors_array, metadatas):
         import json
 
         _setup_tiledb_dlls()
@@ -236,15 +236,14 @@ class CreateVectorDB:
         import tiledb.vector_search as vs
         from tiledb.vector_search import _tiledbvspy as vspy
 
+        WRITE_BATCH_SIZE = 100000
+        MAX_UINT64 = 18446744073709551615
+
         embedding_dim = vectors_array.shape[1]
         num_vectors = vectors_array.shape[0]
 
         logger.info(f"Creating TileDB array: {num_vectors:,} vectors of dimension {embedding_dim}")
         logger.info(f"Vectors array shape: {vectors_array.shape}, dtype: {vectors_array.dtype}")
-
-        logger.info("Converting IDs to uint64 array...")
-        ids_array = np.array([int(id_str) for id_str in ids], dtype=np.uint64)
-        logger.info(f"IDs array ready: {ids_array.shape}")
 
         array_uri = str(self.PERSIST_DIRECTORY / "vectors")
 
@@ -264,27 +263,41 @@ class CreateVectorDB:
             attrs=attrs,
             sparse=True,
             cell_order='row-major',
-            tile_order='row-major'
+            tile_order='row-major',
         )
 
         logger.info("Creating TileDB array on disk...")
         tiledb.Array.create(array_uri, schema)
         logger.info("TileDB array schema created.")
 
-        num_batches = (num_vectors + TILEDB_WRITE_BATCH_SIZE - 1) // TILEDB_WRITE_BATCH_SIZE
+        num_batches = (num_vectors + WRITE_BATCH_SIZE - 1) // WRITE_BATCH_SIZE
         logger.info(f"Writing TileDB array in {num_batches} batch(es) "
-                     f"of up to {TILEDB_WRITE_BATCH_SIZE:,} records")
+                     f"of up to {WRITE_BATCH_SIZE:,} records")
+
+        all_ids_list = []
+        hash_id_mappings = []
 
         for batch_idx in range(num_batches):
-            start = batch_idx * TILEDB_WRITE_BATCH_SIZE
-            end = min(start + TILEDB_WRITE_BATCH_SIZE, num_vectors)
+            start = batch_idx * WRITE_BATCH_SIZE
+            end = min(start + WRITE_BATCH_SIZE, num_vectors)
             batch_size = end - start
 
             logger.info(f"  Preparing batch {batch_idx + 1}/{num_batches} "
                         f"(records {start:,}-{end - 1:,})...")
 
+            batch_ids = np.array(
+                [random.randint(0, MAX_UINT64 - 1) for _ in range(batch_size)],
+                dtype=np.uint64
+            )
+
+            for i in range(batch_size):
+                meta = metadatas[start + i] if (start + i) < len(metadatas) else {}
+                file_hash = meta.get('hash', '')
+                hash_id_mappings.append((str(batch_ids[i]), file_hash))
+
+            all_ids_list.append(batch_ids)
+
             batch_vectors = vectors_array[start:end]
-            batch_ids = ids_array[start:end]
             batch_texts = np.array(texts[start:end], dtype=object)
             batch_metadata = np.array(
                 [json.dumps(metadatas[i]) for i in range(start, end)],
@@ -318,13 +331,16 @@ class CreateVectorDB:
         logger.info("Creating TileDB FLAT vector search index via ingest...")
         index_uri = str(self.PERSIST_DIRECTORY / "vector_index")
 
+        ids_array = np.concatenate(all_ids_list, axis=0)
+        del all_ids_list
+
         index = vs.ingest(
             index_type="FLAT",
             index_uri=index_uri,
             input_vectors=vectors_array,
             external_ids=ids_array,
             dimensions=embedding_dim,
-            distance_metric=vspy.DistanceMetric.COSINE
+            distance_metric=vspy.DistanceMetric.COSINE,
         )
 
         metadata_file = self.PERSIST_DIRECTORY / "index_metadata.json"
@@ -334,10 +350,12 @@ class CreateVectorDB:
                 'dimensions': embedding_dim,
                 'vector_type': 'float32',
                 'index_type': 'FLAT',
-                'num_vectors': num_vectors
+                'num_vectors': num_vectors,
             }, f)
 
         logger.info(f"FLAT index created at: {index_uri}")
+
+        return hash_id_mappings
 
     def clear_docs_for_db_folder(self):
         for item in self.SOURCE_DIRECTORY.iterdir():
@@ -424,14 +442,8 @@ class CreateVectorDB:
                 return
 
             # ============================================================
-            # Build metadata and ID mappings
+            # Validate metadata
             # ============================================================
-            logger.info("Building metadata and ID mappings...")
-            all_metadatas = []
-            all_ids = []
-            hash_id_mappings = []
-            MAX_UINT64 = 18446744073709551615
-
             logger.info(f"Metadata mapping: {len(chunk_texts):,} chunk_texts, "
                         f"{len(chunks_with_meta):,} chunks_with_meta")
             if chunks_with_meta:
@@ -439,24 +451,6 @@ class CreateVectorDB:
                 logger.info(f"Sample metadata keys: {list(sample_meta.keys())}")
             else:
                 logger.warning("chunks_with_meta is EMPTY — metadata will be missing!")
-
-            for idx in range(len(chunk_texts)):
-                tiledb_id = str(random.randint(0, MAX_UINT64 - 1))
-
-                if idx < len(chunks_with_meta):
-                    _, meta = chunks_with_meta[idx]
-                else:
-                    meta = {}
-
-                file_hash = meta.get('hash', '')
-                all_metadatas.append(meta)
-                all_ids.append(tiledb_id)
-                hash_id_mappings.append((tiledb_id, file_hash))
-
-            logger.info(f"Metadata mapping complete: {len(all_metadatas):,} entries")
-
-            del chunks_with_meta
-            gc.collect()
 
             # ============================================================
             # Stage 3+4: Tokenize + Embed via subprocess pipeline
@@ -492,12 +486,17 @@ class CreateVectorDB:
             del vectors
             gc.collect()
 
+            all_metadatas = [meta for _, meta in chunks_with_meta] if chunks_with_meta else [{} for _ in chunk_texts]
+            del chunks_with_meta
+            gc.collect()
+
             # ============================================================
             # Stage 5: Write TileDB array + FLAT index (batched)
             # ============================================================
             logger.info("Creating TileDB vector database...")
             try:
-                self._create_tiledb_array(chunk_texts, vectors_array, all_metadatas, all_ids)
+                hash_id_mappings = self._create_tiledb_array(
+                    chunk_texts, vectors_array, all_metadatas)
             except Exception as e:
                 logger.error(f"Error creating TileDB database: {e}")
                 traceback.print_exc()
@@ -517,7 +516,7 @@ class CreateVectorDB:
             # ============================================================
             # Stage 6: Write SQLite metadata DB
             # ============================================================
-            del chunk_texts, vectors_array, all_metadatas, all_ids
+            del chunk_texts, vectors_array, all_metadatas
             gc.collect()
 
             create_metadata_db(self.PERSIST_DIRECTORY, json_docs_to_save, hash_id_mappings)
